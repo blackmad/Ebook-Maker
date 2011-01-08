@@ -1,0 +1,16 @@
+Based on mostly unmodified code from http://code.google.com/p/python-epub-builder/
+
+You'll want to install genshi & lxml
+  easy_install lxml genshi
+
+For converting to kindle format, you need either:
+  ebook-convert from Calibre http://calibre-ebook.com
+  /Applications/calibre.app/Contents//MacOS/ebook-convert on OS X
+
+  kindlegen from http://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000234621
+  --Kindlegen can be fussy about bad HTML, ebook-convert is much more forgiving
+
+This script will follow rel=next links on atom feeds, so it can mirror an entire blogspot blog.
+
+You can preview your books in the "Kindle Previewer", also available at http://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000234621
+

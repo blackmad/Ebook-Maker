@@ -9,7 +9,7 @@
 #    Washington's I.T. Guy | The American Prospect
 #                <!******************** -->
 
-kindlegen = '~/Downloads/kindlegen/kindlegen'
+kindlegen = 'kindlegen'
 ebook_convert = 'ebook-convert'
 
 from time import strftime
@@ -119,16 +119,18 @@ def get_all_entries(url, entries):
 def process_feed(file):
   entries = []
   get_all_entries(file, entries)
-  #  book.impl.addMeta('Last Updated: ', d.feed.updated)
 
   for entry in reversed(entries):
     print 'adding: %s' % entry.title
     if full_content:
+      content = entry_get(entry, 'content')
+      if not content:
+        content = entry_get(entry, 'summary')
       add_article(entry_get(entry, 'title'),
         '<html><body><h1>%s</h1><h3>%s</h3>%s</body></html>' % (
         entry_get(entry, 'title'),
         entry_date_str(entry),
-        entry_get(entry, 'summary')))
+        content))
     else:
       print entry.link
       data = get_data(entry.link)
@@ -201,11 +203,11 @@ parser.add_option('-f', '--full', action='store_true', dest='full_content', defa
   help='Use content from RSS/Atom feed, rather than fetching links')
 parser.add_option('-s', '--strip', action='store_true', dest='use_boilerpipe', default=True,
   help='Attempt to strip boilerplate from web content using https://boilerpipe-web.appspot.com/')
-parser.add_option('-t', '--title', dest='title', default=None,
+parser.add_option('-t', '--title', dest='title',
   help='Book Title')
-parser.add_option('-a', '--author', dest='author', default=None,
+parser.add_option('-a', '--author', dest='author',
   help='Book Author')
-parser.add_option('-o', '--output', dest='output', default=None,
+parser.add_option('-o', '--output', dest='output',
   help='Base name of output file & directory')
 parser.add_option('-e', '--epub', action='store_true', dest='generate_epub', default=True,
   help='Generate an epub file')
@@ -218,6 +220,7 @@ parser.add_option('-c', '--calibre', action='store_true', dest='use_calibre', de
 
 if len(args) < 1:
   print 'Must specify an input source'
+  parser.print_help()
   sys.exit(1)
 
 file = args[0]
@@ -232,7 +235,7 @@ print 'Using boilerpipe? ', 'Yes' if use_boilerpipe else 'No'
 full_content = options.full_content
 print 'Full content feed? ', 'Yes' if full_content else 'No'
 
-output_tmp = '/tmp/' + output + '_tmp'
+output_tmp = '/tmp/' + os.path.basename(output) + '_tmp'
 try:
   os.mkdir(output_tmp)
 except:
@@ -240,6 +243,8 @@ except:
 
 book = ez_epub.Book()
 sections = []
+if not options.output and book_title:
+  output = book_title
 print "Processing: " + file
 print 'Output: %s' % output
 if 'rss' in file or 'http' in file or 'atom' in file or 'xml' in file:
@@ -252,22 +257,27 @@ else:
   for row in csv_reader:
     process(row)
 
-if not book_title:
-  book_title = output
+if not options.output:
+  output = book_title
 
 print 'Title: %s' % book_title
 print 'Author: %s' % author
 book.title = book_title
 book.authors = [author]
 book.sections = sections
-generate_epub = args.generate_epub or args.use_calibre
+generate_epub = options.generate_epub or options.use_calibre
 print 'Generating epub? ', 'Yes' if generate_epub else 'No'
-book.make(book_title, generate_epub)
+book.make(output, generate_epub)
 
-if args.use_kindlegen:
+if options.use_kindlegen:
   kindle_cmd = '%s "%s/OEBPS/content.opf" -o "%s.mobi"' % (kindlegen, output, output)
   print(kindle_cmd)
+  os.system(kindle_cmd)
+  mv_cmd = 'mv "%s/OEBPS/%s.mobi" "%s.mobi"' % (output, output, output)
+  print (mv_cmd)
+  os.system(mv_cmd)
 
-if args.use_calibre:
+if options.use_calibre:
   calibre_cmd = '%s "%s.epub" -o "%s.mobi"' % (ebook_convert, output, output)
   print(calibre_cmd)
+  os.system(calibre_cmd)
