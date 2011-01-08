@@ -123,7 +123,7 @@ def process_feed(file):
   for entry in reversed(entries):
     print 'adding: %s' % entry.title
     if full_content:
-      content = entry_get(entry, 'content')
+      content = entry_get(entry, 'content')[0].value
       if not content:
         content = entry_get(entry, 'summary')
       add_article(entry_get(entry, 'title'),
@@ -163,22 +163,23 @@ def add_article(title, data):
         if ':' in attr[1]:
           del a[attr[0]]
 
-    for img in soup.findAll('img'):
-      try:
-        print 'img src: ' + img['src']
-        img_url = img['src']
-        if 'http' not in img_url:
-          img_url = urlparse.urljoin(url, img_url)
-        img_data = urllib2.urlopen(img_url).read()
-        path = urlparse.urlsplit(img['src']).path
-        print 'img path: ' + path
-        img_filename = os.path.split(path)[1]
-        output_path = os.path.join(output_tmp, img_filename)
-        open(output_path, 'w').write(img_data)
-        img['src'] = img_filename
-        book.impl.addImage(output_path, img_filename)
-      except:
-        pass
+    if download_images:
+      for img in soup.findAll('img'):
+        try:
+          print 'img src: ' + img['src']
+          img_url = img['src']
+          if 'http' not in img_url:
+            img_url = urlparse.urljoin(url, img_url)
+          img_data = urllib2.urlopen(img_url).read()
+          path = urlparse.urlsplit(img['src']).path
+          print 'img path: ' + path
+          img_filename = os.path.split(path)[1]
+          output_path = os.path.join(output_tmp, img_filename)
+          open(output_path, 'w').write(img_data)
+          img['src'] = img_filename
+          book.impl.addImage(output_path, img_filename)
+        except:
+          pass
 
     print 'title: ' + title
     section = ez_epub.Section()
@@ -215,6 +216,8 @@ parser.add_option('-k', '--kindle', action='store_true', dest='use_kindlegen', d
   help='Generate a mobi (kindle) file using kindlegen')
 parser.add_option('-c', '--calibre', action='store_true', dest='use_calibre', default=False,
   help='Generate a mobi (kindle) file using ebook-convert from calibre')
+parser.add_option('-n', '--no_images', action='store_false', dest='download_images', default=True,
+  help='Don\'t download images in web pages')
 
 (options, args) = parser.parse_args()
 
@@ -230,6 +233,8 @@ if not options.output:
 
 author = options.author
 book_title = options.title
+download_images = options.download_images
+print 'Download images? ', 'Yes' if download_images else 'No'
 use_boilerpipe = options.use_boilerpipe
 print 'Using boilerpipe? ', 'Yes' if use_boilerpipe else 'No'
 full_content = options.full_content
